@@ -130,7 +130,7 @@ class KB_manager():
             self.signal_track[self.tentacles[2]] = np.append(self.signal_track[self.tentacles[2]], signal3)
             
             #check if there are package loss
-            if simulink_timestamp*2 - (len(self.time_track)-1) > 0:  # should be  0 VS 1, 0.5 VS 2
+            if simulink_timestamp/self.config.sample_t - (len(self.time_track)-1) > 0:  # should be  0 VS 1, 0.5 VS 2
                 logger.info('Package loss!!!')
                 logger.info('simulink_timestamp at {} should collect {} data, but actually just {} data'.format(simulink_timestamp, int(simulink_timestamp*2+1), len(self.time_track)))
             #check if there are package loss
@@ -162,8 +162,9 @@ class KB_manager():
             time2 = time.time()
             logger.info('Signal {} prediction takes {}'.format(tentacle_id, time2-time1))
             
-            set_value = round(self.signal_track[tentacle_id][-1],2)  # -1 VS self.prior_idx + self.config.l_b + self.config.l_f
-            pred_value = round(y_hat_batch[:,-1][0],2)
+            take_point = 10
+            set_value = round(self.signal_track[tentacle_id][-take_point],2)  # -1 VS self.prior_idx + self.config.l_b + self.config.l_f
+            pred_value = round(y_hat_batch[0,10-take_point],2)  # y_hat.shape is (10,1)
             residual = round(set_value - pred_value,2)
             
             self.win.addstr(9, 10*(int(tentacle_id[-1])+1), str(pred_value))

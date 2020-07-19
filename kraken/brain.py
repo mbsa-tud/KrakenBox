@@ -175,9 +175,13 @@ class Modelstream():
         
 # =============================================================================
 # #%%
+# config = Config('./kraken/config.yaml')
+# m = Modelstream(config)        
+# m.load(tentacle_id='R2S1')
+# #%%
 # %%timeit
 # #time1 = time.time()
-# m.stream_predict(np.random.rand(1,m.config.l_b,1))
+# y_hat = m.stream_predict(np.random.rand(1,m.config.l_b,1))
 # #time2 = time.time()
 # #print(time2-time1)
 # =============================================================================
