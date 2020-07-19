@@ -1,19 +1,25 @@
 # Runtime params
 # =============================================================================
-mode: 'Testing'
-train: False #Train # train new or existing model for each channel
-predict: True #Train # generate new predicts or, if False, use predictions stored locally
-run_id: "2020-04-02_19.13.36" #"2018-05-19_15.00.10"
 
-sim_t: 50
+sim_t: 50 #training->2500
 sample_t: 0.1
+
+# connection
+xavier_eth0: "169.254.108.105" #"129.69.81.73"
+simulink_eth0: "192.168.178.46"
+
+run_id: "2020-04-02_19.13.36" 
+
+
+animation: False # optional:  "animation" "plot_cla"
 
 # path
 path_root: '/home/krakenboxtud/Desktop/kraken_box' # 'F:\\code\\py\\pyKraken\\kraken\\kraken-master\\kraken-master'
-path_result: './results/'
+path_model: '/home/krakenboxtud/Desktop/kraken_box/kraken/models/trained_online'
 
 
-
+train_data: '2500npz'  # options:  'online' '2500npz'
+load_model: 'online'   # options:  'online' 'offline'
 
 # output is 10 data, which one you want to take as standard/flag/feature? 
 # counting from the lost point, 10 means the firt point
@@ -25,6 +31,13 @@ batch_size: 70
 
 # number of trailing batches to use in error calculation
 window_size: 30
+
+
+
+
+# Error thresholding parameters
+# =============================================================================
+threshold: {'R2S1':0.3,'R2S2':0.6,'R2S3':0.3}
 
 
 
@@ -62,21 +75,11 @@ l_f: 1 #10
 
 
 
-# Error thresholding parameters
-# =============================================================================
-threshold: 0.3
-
-
-
-# minimum percent decrease between max errors in anomalous sequences (used for pruning)
-p: 0.13
-
-
-
-
 
 # Misc
 # =============================================================================
+mode: 'Training'
+
 # Columns headers for output file
 header: ["run_id", "chan_id", "spacecraft", "num_anoms", "anomaly_sequences", "class", "true_positives", 
         "false_positives", "false_negatives", "tp_sequences", "fp_sequences", "gaussian_p-value", "num_values",
@@ -95,3 +98,6 @@ error_buffer: 10
 element: "magnitude"
 sensor_id: 'R2S1'
 monitor: '2500sec'
+
+train: False #Train # train new or existing model for each channel
+predict: True #Train # generate new predicts or, if False, use predictions stored locally

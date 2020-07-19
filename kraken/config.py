@@ -71,44 +71,7 @@ class Config:
         return channel_group_lookup
 
 
-def make_dirs(_id):
-    '''Create directories for storing data in repo (using datetime ID) if they don't already exist'''
 
-    config = Config("./kraken/config.yaml")
-
-#    if not config.train or not config.predict:  # not train means loading model, not predict means loading prediction
-#        if not os.path.isdir('data/%s' %config.use_id):
-#            raise ValueError("Run ID {} is not valid. If loading prior models or predictions, must provide valid ID.".format(_id))
-
-    paths = ['data', 'data/%s' %_id, 'data/logs',
-             'data/%s/models' %_id, 'data/%s/smoothed_errors' %_id,'data/%s/raw_errors' %_id, 'data/%s/y_hat' %_id,'data/%s/pdf_errors' %_id,
-             'data/%s/inj_data' %_id, 'data/%s/inj_pic' %_id,
-             'results/%s' %_id
-             ]
-
-    for p in paths:
-        if not os.path.isdir(p):
-            os.mkdir(p)
-
-def setup_logging():
-    '''Configure logging object to track parameter settings, training, and evaluation.
-    
-    Args:
-        config(obj): Global object specifying system runtime params.
-
-    Returns:
-        logger (obj): Logging object
-        _id (str): Unique identifier generated from datetime for storing data/models/results
-    '''
-
-    logger = logging.getLogger('kraken')
-    logger.setLevel(logging.INFO)
-
-    stdout = logging.StreamHandler(sys.stdout)
-    stdout.setLevel(logging.INFO)
-    logger.addHandler(stdout)
-
-    return logger
 
 
     

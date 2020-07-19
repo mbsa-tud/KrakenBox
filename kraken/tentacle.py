@@ -41,14 +41,15 @@ class Tentacle():
         self.y_hat = None
         
         
-    def load_golden_run(self, run='2500sec'):
+    def load_golden_run(self, *ts):
         """
-        Load the saved injection free data from local file(xlsx and ts-obj).
+        Load the saved injection free data from local file
+        ( could be xlsx, csv, npy and ts-obj).
         
         Parameters
         ----------
         
-        run: two retrieve options: 100sec and 2500sec, to verify that 
+        run: several retrieve options: 100sec and 2500sec, to verify that 
         more data can train more accuate LSTM
 
         Returns
@@ -59,16 +60,27 @@ class Tentacle():
         """
       
         try:
-            if run == '2500sec':
+            # use the data in the memory that has just been collected
+            if self.config.train_data == 'online':
+                ts = ts
+                
+            # Interface for the npz file
+            elif self.config.train_data == '2500npz': 
+                                       
+                    arch = np.load(os.path.join(self.config.path_root,"data","train","online_collect.npz"))
+                    ts = arch[self.sensor_id.lower()[-2:]]
+                    ts = pd.Series(ts)
+            
+            # Interface for the pkl file
+            elif self.config.train_data == '2500pkl':
                 with open(os.path.join(self.config.path_root,"data","train",
                                        "{}_2500.pkl".format(self.sensor_id.lower())),'rb') as f:
                     ts = pickle.load(f)
                 ts = ts.resample(str(self.config.sample_t)+'S').mean()
                 ts = ts.fillna(method = 'ffill')
-                    
-                    
+               
             # Interface for the xlsx file
-            if run == '100sec':
+            elif self.config.train_data == '100xlsx':
                 dfTrain = pd.read_excel(os.path.join('.',"data","train","{}.xlsx".format(self.id)))  # two col dataframe,col0 is time stamp, col1 is ts
                 
                 # info about the df read from the excel
@@ -139,14 +151,14 @@ class Tentacle():
         
         
         
-    def load_data_train(self):
+    def load_data_train(self, *ts):
        """
        Load the training data which is injection free.
        call the load_golden_run and then shape the data for training
        1 load golden run
-       2 shape data
+       2 reshape data
        """
-       train_ts = self.load_golden_run()
+       train_ts = self.load_golden_run(*ts)
        self.train = np.array(train_ts).reshape(-1,1)
        
        logger.info('before shaping:  {}'.format(self.train.shape))
