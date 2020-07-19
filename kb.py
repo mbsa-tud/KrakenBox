@@ -51,13 +51,11 @@ class KB_manager():
         
         #to do, save it in 4column np or pd
         self.tentacles = ['R2S1', 'R2S2', 'R2S3']
-        self.time_track = np.array([])
-        self.signal_track = dict(zip(self.tentacles, [np.array([]),np.array([]),np.array([])]))
+        self.time_track = np.zeros(1000)
+        self.signal_track = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
         
-        self.set_collect = dict(zip(self.tentacles, [np.array([]),np.array([]),np.array([])]))
-        self.pred_collect = dict(zip(self.tentacles, [np.array([]),np.array([]),np.array([])]))
-        
-        
+        self.set_collect = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
+        self.pred_collect = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
         
         
         self.prior_idx = 0
@@ -108,7 +106,7 @@ class KB_manager():
         self.udp_socket.bind(xavier_eth0_addr)  # its a udp server, listening the requeset from simulink
     
     
-    def recv_track(self):
+    def recv_track(self, count):
         # Start to receive data from Simulink.
             recv_data = self.udp_socket.recvfrom(512)
                 		
@@ -123,20 +121,18 @@ class KB_manager():
             signal2 = round(recv_msg_decode[2],3)
             signal3 = round(recv_msg_decode[3],3)
                 		
-            # Restore the signal and time for a batch:
-            self.time_track = np.append(self.time_track, round(simulink_timestamp,3))
-            self.signal_track[self.tentacles[0]] = np.append(self.signal_track[self.tentacles[0]], signal1)
-            self.signal_track[self.tentacles[1]] = np.append(self.signal_track[self.tentacles[1]], signal2)
-            self.signal_track[self.tentacles[2]] = np.append(self.signal_track[self.tentacles[2]], signal3)
+            # Track: Restore the signal and time for a batch:
+#            self.time_track = np.append(self.time_track, round(simulink_timestamp,3))
+#            self.signal_track[self.tentacles[0]] = np.append(self.signal_track[self.tentacles[0]], signal1)
+#            self.signal_track[self.tentacles[1]] = np.append(self.signal_track[self.tentacles[1]], signal2)
+#            self.signal_track[self.tentacles[2]] = np.append(self.signal_track[self.tentacles[2]], signal3)
             
-            #check if there are package loss
-            if simulink_timestamp/self.config.sample_t - (len(self.time_track)-1) > 0:  # should be  0 VS 1, 0.5 VS 2
-                logger.info('Package loss!!!')
-                logger.info('simulink_timestamp at {} should collect {} data, but actually just {} data'.format(simulink_timestamp, int(simulink_timestamp*2+1), len(self.time_track)))
-            #check if there are package loss
-            logger.info('signal1: {} signal2: {} signal3: {}'.format(self.signal_track[self.tentacles[0]].shape[0],
-                        self.signal_track[self.tentacles[1]].shape[0],
-                        self.signal_track[self.tentacles[2]].shape[0]))
+            self.time_track[count] = round(simulink_timestamp,3)
+            self.signal_track[self.tentacles[0]][count] = signal1
+            self.signal_track[self.tentacles[1]][count] = signal2
+            self.signal_track[self.tentacles[2]][count] = signal3
+            
+
             
             return send_addr, simulink_timestamp, signal1, signal2, signal3
             
@@ -151,79 +147,123 @@ class KB_manager():
             self.win.addstr(7, 20, str(signal1))
             self.win.addstr(7, 30, str(signal2))
             self.win.addstr(7, 40, str(signal3))
+            
+        def flash_detection(tentacle_id, pred_value, residual, flag, flag_c):
+            self.win.addstr(9, 10*(int(tentacle_id[-1])+1), str(pred_value))
+            self.win.addstr(11, 10*(int(tentacle_id[-1])+1), str(residual))
+            self.win.addstr(13, 10*(int(tentacle_id[-1])+1), flag, curses.color_pair(flag_c))
+            self.win.clrtoeol()
         
-        def flash_detect(tentacle_id='R2S1'):
+        def pred_detect(tentacle_id,count):
             """
             display the predtion and residual on the canvas window
             """
             X_test_batch = self.signal_track[tentacle_id][self.prior_idx : self.prior_idx + self.config.l_b].reshape(1,self.config.l_b,1) # critical if package loss
-            time1 = time.time()
+#            time1 = time.time()
             y_hat_batch = self.sub_brains[tentacle_id].model.predict(X_test_batch)
-            time2 = time.time()
-            logger.info('Signal {} prediction takes {}'.format(tentacle_id, time2-time1))
+#            time2 = time.time()
+#            logger.info('Signal {} prediction takes {}'.format(tentacle_id, time2-time1))
             
-            
-            set_value = round(self.signal_track[tentacle_id][-self.config.take_point],2)  # last point: [-1] VS self.prior_idx + self.config.l_b + self.config.l_f -1
-            pred_value = round(y_hat_batch[0,10-self.config.take_point],2)  # y_hat.shape is (10,1)
+            # need to make sure this is right
+            set_value = round(self.signal_track[tentacle_id][count-self.config.take_point],2)  # last point: [-1] VS self.prior_idx + self.config.l_b + self.config.l_f -1
+            pred_value = round(y_hat_batch[0,self.config.l_f-self.config.take_point],2)  # y_hat.shape is (10,1)
             residual = round(set_value - pred_value,2)
             
-            self.win.addstr(9, 10*(int(tentacle_id[-1])+1), str(pred_value))
-            self.win.addstr(11, 10*(int(tentacle_id[-1])+1), str(residual))
-            
-            self.set_collect[tentacle_id] = np.append(self.set_collect[tentacle_id], set_value)
-            self.pred_collect[tentacle_id] = np.append(self.pred_collect[tentacle_id], pred_value)
-            
-            if abs(residual) > self.config.threshold:
-        #                    flag = '%-10s' % 'Error' # overite with 10space
+            if abs(residual) >= self.config.threshold:
+        #     flag = '%-10s' % 'Error' # overite with 10space
                 flag = 'ERROR'
-                self. win.addstr(13, 10*(int(tentacle_id[-1])+1), flag, curses.color_pair(1))
-        #                    os.system('spd-say "anomaly detected"')
+                flag_c = 1
+                
+#                os.system('spd-say "anomaly detected"')
                 
                 # reuse the socket, udp communication session with the simulink model
         		           # Start to send data to Simulink.
         #                    self.udp_socket.sendto(bytes(1), self.simulink_addr)
             else:
                 flag = 'OK'
-                self.win.addstr(13, 10*(int(tentacle_id[-1])+1), flag, curses.color_pair(4))
-            self.win.clrtoeol()
+                flag_c = 4
+                
+            logger.info('flag:{} residual:{} set_value:{} pred_value:{}'.format(flag, residual, set_value, pred_value))
+            return set_value, pred_value, residual, flag, flag_c
                 
     #        y_hat = np.reshape(y_hat, (y_hat.size,))
             
     #        print(y_hat_batch1[:,-1][0], ts1_resampled[prior_idx + 260 - 1], residual1)
     #        print('residual1 {}, residual2 {}, residual3 {}'.format(residual1, residual2, residual3))
     
-    
-    	#----------------------------------- Data Receiving ----------------------------------------
-        
+
+            
+            
         # Using a loop to receive data from Simulink, Can be modified by (simulationTime/sampleTime).
 #        print("----Listening data from simulink udp block----")
 #        print("Please open the Simulink file under the demo system working directory")
 #        print("The program is waiting until you run the Simulink file.")
-        logger.info("listen start at {}".format(time.ctime())) #time.time()
         
+        logger.info("listen start at {}".format(time.ctime())) 
         
         for count in range(0, 10000, 1): 
-            send_addr, simulink_timestamp,  signal1, signal2, signal3 = self.recv_track()
-            flash_signals(send_addr, simulink_timestamp,  signal1, signal2, signal3)
+            #----------------------------------- Data Receiving ----------------------------------------
+            time_start = time.time()
+            send_addr, simulink_timestamp,  signal1, signal2, signal3 = self.recv_track(count)
+            logger.info('\n')
+            logger.info('timestamp:{}'.format(simulink_timestamp))
             
+            time_rec = time.time()
+            
+            #----------------------------------- Processing ----------------------------------------
             # Prediction, only after warm up (collect the first l_s steps to initialize the ts obj)
-            # Detection, flag the 
+            # Detection, add the flag
             if simulink_timestamp > (self.config.l_b + self.config.l_f) * self.config.sample_t: #and count > self.config.l_b + self.config.l_f
-                self.win.addstr(1, 20, '%-50s' % 'Detection')
+                win_1_20 = 'Detection' 
                 
-                for tentacle_id in self.tentacles:
-                    flash_detect(tentacle_id)
-                self.prior_idx += 1 
+#                for tentacle_id in self.tentacles:
+#                    flash_detect(tentacle_id)
+
+                
+                set_value1, pred_value1, residual1, flag1, flag_c1 = pred_detect('R2S1',count)
+                set_value2, pred_value2, residual2, flag2, flag_c2 = pred_detect('R2S2',count)
+                set_value3, pred_value3, residual3, flag3, flag_c3 = pred_detect('R2S3',count)
+                self.prior_idx += 1                 
                 
                 logger.info('prior_idx: {} + warming steps: {} => count: {}'.format(self.prior_idx, self.config.l_b+self.config.l_f, count))
                                 
             else:
-                self.win.addstr(1, 20, '%-50s' % 'Waiting for collceting enough data')
+                win_1_20 = 'Waiting for collceting enough data'
                 
-            self.win.refresh()
+                set_value1, pred_value1, residual1, flag1, flag_c1 = signal1,signal1,0,'Ok',4
+                set_value2, pred_value2, residual2, flag2, flag_c2 = signal2,signal2,0,'Ok',4
+                set_value3, pred_value3, residual3, flag3, flag_c3 = signal3,signal3,0,'Ok',4
+                
+                
+#            self.set_collect[tentacle_id] = np.append(self.set_collect[tentacle_id], set_value)
+#            self.pred_collect[tentacle_id] = np.append(self.pred_collect[tentacle_id], pred_value)
+            self.set_collect['R2S1'][count] = set_value1
+            self.pred_collect['R2S1'][count] = pred_value1
             
+            self.set_collect['R2S2'][count] = set_value2
+            self.pred_collect['R2S2'][count] = pred_value2
+            
+            self.set_collect['R2S3'][count] = set_value3
+            self.pred_collect['R2S3'][count] = pred_value3
+                
+            time_process = time.time()    
+            #----------------------------------- Output ----------------------------------------    
+#            if (flag1 == 'ERROR' or flag2  == 'ERROR' or flag3  == 'ERROR'):
+            self.win.addstr(1, 20, '%-50s' % win_1_20)    
+            flash_signals(send_addr, simulink_timestamp,  signal1, signal2, signal3)
+            flash_detection('R2S1', pred_value1, residual1, flag1, flag_c1)
+            flash_detection('R2S2', pred_value2, residual2, flag2, flag_c2)
+            flash_detection('R2S3', pred_value3, residual3, flag3, flag_c3)
+            self.win.refresh()
+        
+            time_output = time.time()
+        
+            logger.info('loop:{} time_rec:{} time_process:{} time_output:{}'.format(time_output-time_start,
+                        time_rec-time_start,
+                        time_process-time_rec,
+                        time_output-time_process))
             # Set the condition to jump out of this loop
-            if simulink_timestamp > 99: #abs(count-100/self.config.sample_t) < 1e-6
+            if simulink_timestamp > 99.8: #abs(count-100/self.config.sample_t) < 1e-6
                 break
 
             
@@ -260,22 +300,33 @@ class KB_manager():
                   p3=p3)
 
         # plot the set value and pred value
-        fig,ax = plt.subplots(6,1,figsize=(8,12))
+        fig,ax = plt.subplots(6,1,figsize=(24,16))
         ax[0].plot(s1,'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's1')
         ax[0].plot(p1,'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p1')
         ax[0].legend()    
         ax[1].plot(s1-p1,'r',ls='--',lw=1,marker='*',mec='r',mew=1,mfc='r',ms=2)
+        ax[1].axhline(y=0.3,color='k')
+        ax[1].axhline(y=-0.3,color='k')
+        for e in np.where(abs(s1-p1)>0.3)[0]:
+            ax[1].axvline(x=e,c='red', alpha =0.3)
         
         ax[2].plot(s2,'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's2')
         ax[2].plot(p2,'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p2')
         ax[2].legend()    
         ax[3].plot(s2-p2,'r',ls='--',lw=1,marker='*',mec='r',mew=1,mfc='r',ms=2)
+        ax[3].axhline(y=0.3,color='k')
+        ax[3].axhline(y=-0.3,color='k')
+        for e in np.where(abs(s2-p2)>0.3)[0]:
+            ax[3].axvline(x=e,c='red', alpha =0.3)
         
         ax[4].plot(s3,'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's3')
         ax[4].plot(p3,'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p3')
         ax[4].legend()    
         ax[5].plot(s3-p3,'r',ls='--',lw=1,marker='*',mec='r',mew=1,mfc='r',ms=2)
-        
+        ax[5].axhline(y=0.3,color='k')
+        ax[5].axhline(y=-0.3,color='k')
+        for e in np.where(abs(s3-p3)>0.3)[0]:
+            ax[5].axvline(x=e,c='red', alpha =0.3)
         
         fig.savefig(self.protoc_name)
         
@@ -402,7 +453,7 @@ class KB_manager():
 
 
 if __name__ == "__main__":
-        print('Configuring..')
+        print('Configuring...')
         config = Config('./kraken/config.yaml')
         print('establishing comunication interface...')
         manager = KB_manager('stream',config)
