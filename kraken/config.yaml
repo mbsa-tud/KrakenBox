@@ -5,14 +5,15 @@ train: False #Train # train new or existing model for each channel
 predict: True #Train # generate new predicts or, if False, use predictions stored locally
 run_id: "2020-04-02_19.13.36" #"2018-05-19_15.00.10"
 
-
+sim_t: 50
+sample_t: 0.1
 
 # path
 path_root: '/home/krakenboxtud/Desktop/kraken_box' # 'F:\\code\\py\\pyKraken\\kraken\\kraken-master\\kraken-master'
 path_result: './results/'
 
 
-sample_t: 0.1
+
 
 # output is 10 data, which one you want to take as standard/flag/feature? 
 # counting from the lost point, 10 means the firt point

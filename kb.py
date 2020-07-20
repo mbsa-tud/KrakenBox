@@ -51,11 +51,13 @@ class KB_manager():
         
         #to do, save it in 4column np or pd
         self.tentacles = ['R2S1', 'R2S2', 'R2S3']
-        self.time_track = np.zeros(1000)
-        self.signal_track = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
         
-        self.set_collect = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
-        self.pred_collect = dict(zip(self.tentacles, [np.zeros(1000),np.zeros(1000),np.zeros(1000)]))
+        self.steps = int(self.config.sim_t/self.config.sample_t)
+        self.time_track = np.zeros(self.steps)
+        self.signal_track = dict(zip(self.tentacles, [np.zeros(self.steps),np.zeros(self.steps),np.zeros(self.steps)]))
+        
+        self.set_collect = dict(zip(self.tentacles, [np.zeros(self.steps),np.zeros(self.steps),np.zeros(self.steps)]))
+        self.pred_collect = dict(zip(self.tentacles, [np.zeros(self.steps),np.zeros(self.steps),np.zeros(self.steps)]))
         
         
         self.prior_idx = 0
@@ -158,6 +160,9 @@ class KB_manager():
             """
             display the predtion and residual on the canvas window
             """
+            #prior_idx+warmup60=count(now)
+            #not [self.prior_idx : self.prior_idx + self.config.l_b], -> l_f steps before
+            #but [- self.config.l_b]
             X_test_batch = self.signal_track[tentacle_id][self.prior_idx : self.prior_idx + self.config.l_b].reshape(1,self.config.l_b,1) # critical if package loss
 #            time1 = time.time()
             y_hat_batch = self.sub_brains[tentacle_id].model.predict(X_test_batch)
@@ -263,7 +268,7 @@ class KB_manager():
                         time_process-time_rec,
                         time_output-time_process))
             # Set the condition to jump out of this loop
-            if simulink_timestamp > 99.8: #abs(count-100/self.config.sample_t) < 1e-6
+            if simulink_timestamp > self.config.sim_t-0.2: # #abs(count-100/self.config.sample_t) < 1e-6
                 break
 
             
