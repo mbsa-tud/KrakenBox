@@ -14,7 +14,9 @@ path_result: './results/'
 
 sample_t: 0.1
 
-
+# output is 10 data, which one you want to take as standard/flag/feature? 
+# counting from the lost point, 10 means the firt point
+take_point: 10  #10...1 
 
 
 # number of values to evaluate in each batch

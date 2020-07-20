@@ -162,9 +162,9 @@ class KB_manager():
             time2 = time.time()
             logger.info('Signal {} prediction takes {}'.format(tentacle_id, time2-time1))
             
-            take_point = 10
-            set_value = round(self.signal_track[tentacle_id][-take_point],2)  # -1 VS self.prior_idx + self.config.l_b + self.config.l_f
-            pred_value = round(y_hat_batch[0,10-take_point],2)  # y_hat.shape is (10,1)
+            
+            set_value = round(self.signal_track[tentacle_id][-self.config.take_point],2)  # last point: [-1] VS self.prior_idx + self.config.l_b + self.config.l_f -1
+            pred_value = round(y_hat_batch[0,10-self.config.take_point],2)  # y_hat.shape is (10,1)
             residual = round(set_value - pred_value,2)
             
             self.win.addstr(9, 10*(int(tentacle_id[-1])+1), str(pred_value))
@@ -215,7 +215,7 @@ class KB_manager():
                     flash_detect(tentacle_id)
                 self.prior_idx += 1 
                 
-                logger.info('prior_idx: {} + {} => count: {}'.format(self.prior_idx, self.config.l_b+self.config.l_f, count))
+                logger.info('prior_idx: {} + warming steps: {} => count: {}'.format(self.prior_idx, self.config.l_b+self.config.l_f, count))
                                 
             else:
                 self.win.addstr(1, 20, '%-50s' % 'Waiting for collceting enough data')
@@ -242,14 +242,24 @@ class KB_manager():
         
         
     def detect_protoc(self):
+        self.protoc_name = 'detect_protoc_' +'_'.join(time.ctime().split())
         
+        # save the set value and pred value
         s1=self.set_collect['R2S1']
         s2=self.set_collect['R2S2']
         s3=self.set_collect['R2S3']
         p1=self.pred_collect['R2S1']
         p2=self.pred_collect['R2S2']
         p3=self.pred_collect['R2S3']
-        
+        np.savez(self.protoc_name+'.npz',
+                  s1=s1,
+                  s2=s2,
+                  s3=s3,
+                  p1=p1,
+                  p2=p2,
+                  p3=p3)
+
+        # plot the set value and pred value
         fig,ax = plt.subplots(6,1,figsize=(8,12))
         ax[0].plot(s1,'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's1')
         ax[0].plot(p1,'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p1')
@@ -266,15 +276,8 @@ class KB_manager():
         ax[4].legend()    
         ax[5].plot(s3-p3,'r',ls='--',lw=1,marker='*',mec='r',mew=1,mfc='r',ms=2)
         
-        self.protoc_name = 'detect_protoc_' +'_'.join(time.ctime().split())
+        
         fig.savefig(self.protoc_name)
-        np.savez(self.protoc_name+'.npz',
-                          s1=s1,
-                          s2=s2,
-                          s3=s3,
-                          p1=p1,
-                          p2=p2,
-                          p3=p3)
         
     def compare_s_p(self):
         """
