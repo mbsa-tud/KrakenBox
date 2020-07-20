@@ -51,7 +51,8 @@ class Modelstream():
             2500sec with sample time 0.1sec, trained with 250 l_b
             2500sec with sampel time 0.5sec, trained with 50 l_b
         """
-        self.model = load_model(os.path.join('kraken','models', 'trained_w_files', tentacle_id + '_'+ str(self.config.sample_t) + '.h5'))
+        self.model = load_model(os.path.join('kraken','models', 'trained_w_files',
+                                             tentacle_id + '_'+ str(self.config.sample_t) + '_'+ str(self.config.l_b) + '.h5'))
         
     
 
@@ -109,7 +110,7 @@ class Modelstream():
         ax[1].plot(self.model.history.history['mean_absolute_error'],label='train_mae')
         ax[1].plot(self.model.history.history['val_mean_absolute_error'],label='val_mae')
         ax[1].legend()
-        fig.savefig(str(tentacle.sensor_id)+'_'+str(self.config.l_b))
+        fig.savefig(str(tentacle.sensor_id)+'_'+str(self.config.sample_t)+'_'+str(self.config.l_b))
         
     def train_lstm(self, tentacle):
         """

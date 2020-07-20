@@ -1,20 +1,18 @@
 # Runtime params
 # =============================================================================
-mode: 'Training'
+mode: 'Testing'
 train: False #Train # train new or existing model for each channel
 predict: True #Train # generate new predicts or, if False, use predictions stored locally
 run_id: "2020-04-02_19.13.36" #"2018-05-19_15.00.10"
 
-element: "magnitude"
-sensor_id: 'R2S1'
-monitor: '2500sec'
+
 
 # path
-path_abs: '/home/krakenboxtud/Desktop/kraken_box' # 'F:\\code\\py\\pyKraken\\kraken\\kraken-master\\kraken-master'
+path_root: '/home/krakenboxtud/Desktop/kraken_box' # 'F:\\code\\py\\pyKraken\\kraken\\kraken-master\\kraken-master'
 path_result: './results/'
 
 
-sample_t: 0.5
+sample_t: 0.1
 
 
 
@@ -88,3 +86,9 @@ smoothing_perc: 0.05
 
 # number of values surrounding an error that are brought into the sequence (promotes grouping on nearby sequences
 error_buffer: 10
+
+
+
+element: "magnitude"
+sensor_id: 'R2S1'
+monitor: '2500sec'

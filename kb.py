@@ -145,7 +145,7 @@ class KB_manager():
     
     
     def listening(self):
-        def flash_signals(self, send_addr, simulink_timestamp,  signal1, signal2, signal3):
+        def flash_signals(send_addr, simulink_timestamp,  signal1, signal2, signal3):
             self.win.addstr(3, 20, str(send_addr))
             self.win.addstr(5, 20, str(simulink_timestamp))
             self.win.addstr(7, 20, str(signal1))
@@ -188,12 +188,9 @@ class KB_manager():
                 
     #        y_hat = np.reshape(y_hat, (y_hat.size,))
             
-            
     #        print(y_hat_batch1[:,-1][0], ts1_resampled[prior_idx + 260 - 1], residual1)
     #        print('residual1 {}, residual2 {}, residual3 {}'.format(residual1, residual2, residual3))
     
-    
-        
     
     	#----------------------------------- Data Receiving ----------------------------------------
         
@@ -204,20 +201,20 @@ class KB_manager():
         logger.info("listen start at {}".format(time.ctime())) #time.time()
         
         
-        for count in range(0, 5000, 1): 
+        for count in range(0, 10000, 1): 
             send_addr, simulink_timestamp,  signal1, signal2, signal3 = self.recv_track()
             flash_signals(send_addr, simulink_timestamp,  signal1, signal2, signal3)
             
             # Prediction, only after warm up (collect the first l_s steps to initialize the ts obj)
             # Detection, flag the 
-            if self.simulink_timestamp > (self.config.l_b + self.config.l_f) * self.config.sample_t: #and count > self.config.l_b + self.config.l_f
+            if simulink_timestamp > (self.config.l_b + self.config.l_f) * self.config.sample_t: #and count > self.config.l_b + self.config.l_f
                 self.win.addstr(1, 20, '%-50s' % 'Detection')
                 
                 for tentacle_id in self.tentacles:
                     flash_detect(tentacle_id)
                 self.prior_idx += 1 
                 
-                logger.info('prior_idx: {} + 60 => count: {}'.format(self.prior_idx, count))
+                logger.info('prior_idx: {} + {} => count: {}'.format(self.prior_idx, self.config.l_b+self.config.l_f, count))
                                 
             else:
                 self.win.addstr(1, 20, '%-50s' % 'Waiting for collceting enough data')
@@ -252,7 +249,7 @@ class KB_manager():
         p2=self.pred_collect['R2S2']
         p3=self.pred_collect['R2S3']
         
-        fig,ax = plt.subplots(6,1,figsize=(6,12))
+        fig,ax = plt.subplots(6,1,figsize=(8,12))
         ax[0].plot(s1,'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's1')
         ax[0].plot(p1,'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p1')
         ax[0].legend()    
@@ -286,7 +283,7 @@ class KB_manager():
         """
     
         arch = np.load(self.protoc_name+'.npz')
-        fig,ax = plt.subplots(6,1,figsize=(6,12))
+        fig,ax = plt.subplots(6,1,figsize=(8,12))
         ax[0].plot(arch['s1'],'k',ls='--',lw=1,marker='*',mec='k',mew=1,mfc='k',ms=2,label = 's1')
         ax[0].plot(arch['p1'],'b',ls='--',lw=1,marker='*',mec='b',mew=1,mfc='b',ms=2,label = 'p1')
         ax[0].legend()    
@@ -304,7 +301,7 @@ class KB_manager():
         
     def training_mode(self):
         '''
-        get the collected data from training mode and save them as files
+        Get the collected data through the udp socket and save them as files
         Arg:
                    
         '''
@@ -323,7 +320,7 @@ class KB_manager():
             print(send_addr, simulink_timestamp,  signal1, signal2, signal3)
             
             # Set the condition to jump out of this loop
-            if simulink_timestamp > 3600: #abs(count-100/self.config.sample_t) < 1e-6
+            if simulink_timestamp > 3600: #abs(count-3600/self.config.sample_t) < 1e-6
                 break
         arch()
             
@@ -331,10 +328,12 @@ class KB_manager():
             
        
             
-    def arr2ts(self, signal_nb=1):
+    def arr2ts(self, signal_id='R2S1'):
         """
         encapseln into ts object, Index of series: simulink_time->pd.time_delta
     	    resample the signals according to the timestamp, standard is 0.1sec
+        Arg:
+            signal_nb: 
         """
         idx = self.time_track
         t_idx = list(map(lambda s: pd.Timedelta(s, unit='s'), idx))    # encapseln the timestamp into timedelta obj
@@ -420,7 +419,7 @@ if __name__ == "__main__":
             manager.training_mode()
     
 # =============================================================================
-# #%%
+# #%% manually train the model
 # config = Config('./kraken/config.yaml')
 # t = Tentacle(config,'R2S3')
 # t.load_data_train()
