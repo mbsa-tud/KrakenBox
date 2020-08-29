@@ -60,7 +60,8 @@ class Tentacle():
       
         try:
             if run == '2500sec':
-                with open(os.path.join('/home/krakenboxtud/Desktop/kraken_box/',"data","train","{}_2500.pkl".format(self.sensor_id.lower())),'rb') as f:
+                with open(os.path.join('/home/krakenboxtud/Desktop/kraken_box/',"data","train",
+                                       "{}_2500.pkl".format(self.sensor_id.lower())),'rb') as f:
                     ts = pickle.load(f)
                 ts = ts.resample(str(self.config.sample_t)+'S').mean()
                 ts = ts.fillna(method = 'ffill')

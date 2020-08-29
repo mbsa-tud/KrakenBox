@@ -1,5 +1,6 @@
 # Runtime params
 # =============================================================================
+mode: 'Training'
 train: False #Train # train new or existing model for each channel
 predict: True #Train # generate new predicts or, if False, use predictions stored locally
 run_id: "2020-04-02_19.13.36" #"2018-05-19_15.00.10"
@@ -62,7 +63,7 @@ l_f: 10
 
 # Error thresholding parameters
 # =============================================================================
-threshold: 0.2
+threshold: 0.3
 
 
 
